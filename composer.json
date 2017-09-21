@@ -1,0 +1,182 @@
+{
+    "name": "nrel/solarpaces-project",
+    "description": "Project template for Drupal 8 sites built with the Solarpaces Lightning sub-profile distribution.",
+    "type": "project",
+    "homepage": "https://github.com/NREL/solarpaces-project",
+    "authors": [
+        {
+            "name": "Damon Haley (dhaley)",
+            "email": "damon.haley@nrel.gov",
+            "role": "Maintainer"
+        },
+        {
+            "name": "Shaun Laws (slaws)",
+            "email": "shaun.laws@nrel.gov",
+            "role": "Co-maintainer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/NREL/solarpaces-project/issues"
+    },
+    "license": "GPL-2.0+",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require-dev": {
+        "drupal/drupal-extension": "~3.3.0",
+        "behat/mink": "~1.7",
+        "behat/mink-goutte-driver": "~1.2",
+        "jcalderonzumba/gastonjs": "~1.0.2",
+        "drupal/coder": "8.*",
+        "mikey179/vfsStream": "~1.2",
+        "phpunit/phpunit": "~4.8",
+        "symfony/css-selector": "~2.8",
+        "behat/behat": "^3.0",
+        "se/selenium-server-standalone": "^2.53",
+        "composer/composer": "^1.3",
+        "drupal/console": "^1.0",
+        "drush/drush": "8.1.11",
+        "drush/config-extra": "~1.0",
+        "drupal/stage_file_proxy": "~1.0@alpha",
+        "drupal/devel": "~1.0"
+    },
+    "require": {
+        "drupal-composer/drupal-scaffold": "^2.0.0",
+        "cweagans/composer-patches": "^1.6.0",
+        "nrel/nrel_solarpaces_profile": "1.003"
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://packages.drupal.org/8"
+        },
+        {
+            "type": "composer",
+            "url": "https://asset-packagist.org"
+        },
+        {
+            "type":"package",
+            "package": {
+                "name": "NREL/nrel_solarpaces_profile",
+                "version":"1.003",
+                "type": "drupal-profile",
+                "source": {
+                    "url": "https://github.com/NREL/nrel_solarpaces_profile.git",
+                    "type": "git",
+                    "reference":"master"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "d3/d3",
+                "version": "v3.5.17",
+                "type": "drupal-library",
+                "source": {
+                    "url": "https://github.com/d3/d3",
+                    "type": "git",
+                    "reference": "v3.5.17"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "components/highlightjs",
+                "version": "9.7.0",
+                "type": "drupal-library",
+                "source": {
+                    "url": "https://github.com/components/highlightjs",
+                    "type": "git",
+                    "reference": "9.7.0"
+                }
+            }
+        }
+    ],
+    "scripts": {
+      "post-install-cmd": [
+          "DrupalComposer\\DrupalScaffold\\Plugin::scaffold",
+          "Acquia\\Lightning\\ScriptHandler::deployLibraries",
+          "if [ ! -d ./docroot/simplesaml ] ; then /bin/ln -f -s ../vendor/simplesamlphp/simplesamlphp/www ./docroot/simplesaml ; fi",
+          "if [ ! -d ./docroot/libraries/jquery_colorpicker ] ; then /bin/ln -f -s ../../docroot/profiles/contrib/communications/libraries/jquery_colorpicker ./docroot/libraries/jquery_colorpicker ; fi",
+          "if [ ! -d ./docroot/libraries/slick ] ; then /bin/ln -f -s ../../docroot/profiles/contrib/communications/libraries/slick ./docroot/libraries/slick ; fi",
+          "if [ ! -d ./docroot/libraries/masonry ] ; then /bin/ln -f -s ../../docroot/profiles/contrib/communications/libraries/masonry ./docroot/libraries/masonry ; fi",
+          "if [ ! -d ./docroot/libraries/juicebox ] ; then /bin/ln -f -s ../../docroot/profiles/contrib/communications/libraries/juicebox ./docroot/libraries/juicebox ; fi",
+          "if [ ! -d ./docroot/libraries/imagesloaded ] ; then /bin/ln -f -s ../../docroot/profiles/contrib/communications/libraries/imagesloaded ./docroot/libraries/imagesloaded ; fi",
+          "if [ ! -d ./docroot/libraries/phpexcel ] ; then /bin/ln -f -s ../../vendor/phpoffice/phpexcel ./docroot/libraries/phpexcel ; fi",
+          "if [ ! -d ./docroot/libraries/plupload ] ; then /bin/ln -f -s ../../docroot/profiles/contrib/communications/libraries/plupload ./docroot/libraries/plupload ; fi",
+          "/bin/ln -f -s ../../../../simplesamlphp/config/authsources.php ./vendor/simplesamlphp/simplesamlphp/config/authsources.php",
+          "/bin/ln -f -s ../../../../simplesamlphp/config/config.php ./vendor/simplesamlphp/simplesamlphp/config/config.php",
+          "/bin/ln -f -s ../../../../simplesamlphp/config/authmemcookie.php ./vendor/simplesamlphp/simplesamlphp/config/authmemcookie.php",
+          "/bin/ln -f -s ../../../../simplesamlphp/config/ldap.php ./vendor/simplesamlphp/simplesamlphp/config/ldap.php",
+          "/bin/ln -f -s ../../../../simplesamlphp/metadata/saml20-idp-remote.php ./vendor/simplesamlphp/simplesamlphp/metadata/saml20-idp-remote.php",
+          "/bin/ln -f -s ../../../../simplesamlphp/metadata/saml20-sp-remote.php ./vendor/simplesamlphp/simplesamlphp/metadata/saml20-sp-remote.php",
+          "patch ./docroot/.htaccess < ./patches/htaccess-saml.patch",
+          "/bin/ln -f -s ../../../../../../../vendor/twbs/bootstrap ./docroot/profiles/contrib/communications/themes/contrib/nrel_bootstrap/bootstrap",
+          "/bin/ln -f -s ../../../../../../../vendor/twbs/bootstrap ./docroot/profiles/contrib/communications/themes/contrib/thesource/bootstrap",
+          "rm -Rf ./docroot/libraries/d3/.git*",
+          "rm -Rf ./docroot/libraries/highlightjs/.git*",
+          "rm -Rf ./docroot/modules/contrib/elasticsearch_connector/.git",
+          "rm -Rf ./docroot/modules/contrib/elasticsearch_helper/.git",
+          "rm -Rf ./vendor/nodespark/des-connector/.git",
+          "rm -Rf ./vendor/relaxedws/couchdb/.git",
+          "rm -Rf ./vendor/relaxedws/lca/.git",
+          "rm -Rf ./vendor/relaxedws/replicator/.git",
+          "rm -Rf ./docroot/modules/contrib/elasticsearch_aws_connector/.git",
+          "rm -Rf ./docroot/modules/contrib/file_entity/.git",
+          "rm -Rf ./docroot/modules/contrib/vbo_export/.git",
+          "rm -Rf ./docroot/modules/contrib/views_bulk_operations/.git",
+          "rm -Rf ./docroot/profiles/contrib/lightning/.git",
+          "rm -Rf ./docroot/profiles/contrib/lightning/.gitignore",
+          "rm -Rf ./vendor/elasticsearch/elasticsearch/.gitmodules",
+          "rm -Rf ./docroot/profiles/contrib/taxonomy_manager/.git"
+      ],
+      "post-update-cmd": [
+        "DrupalComposer\\DrupalScaffold\\Plugin::scaffold",
+        "Acquia\\Lightning\\ScriptHandler::deployLibraries"
+      ]
+    },
+    "config": {
+        "bin-dir": "bin/"
+    },
+    "autoload": {
+        "classmap": [
+          "scripts/ScriptHandler.php"
+        ]
+    },
+    "extra": {
+        "installer-types": [
+          "bower-asset",
+          "npm-asset"
+        ],
+        "installer-paths": {
+            "docroot/core": [
+                "type:drupal-core"
+            ],
+          "docroot/libraries/{$name}": [
+            "type:drupal-library",
+            "type:bower-asset",
+            "type:npm-asset"
+          ],
+          "docroot/modules/contrib/{$name}": [
+                "type:drupal-module"
+            ],
+            "docroot/profiles/contrib/{$name}": [
+                "type:drupal-profile"
+            ],
+            "docroot/themes/contrib/{$name}": [
+                "type:drupal-theme"
+            ],
+            "drush/contrib/{$name}": [
+                "type:drupal-drush"
+            ]
+        },
+        "enable-patching": true,
+        "patches": {
+            "drupal/media_entity_image": {
+                "2875852 - Add Imagick field providers":
+                "https://www.drupal.org/files/issues/media_entity_image-2875852-3-Add-Imagick-field-providers.patch"
+            }
+        }
+    }
+}
