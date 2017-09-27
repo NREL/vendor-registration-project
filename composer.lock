@@ -2750,6 +2750,81 @@
             }
         },
         {
+            "name": "drupal/default_content",
+            "version": "1.0.0-alpha6",
+            "source": {
+                "type": "git",
+                "url": "https://git.drupal.org/project/default_content",
+                "reference": "8.x-1.0-alpha6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://ftp.drupal.org/files/projects/default_content-8.x-1.0-alpha6.zip",
+                "reference": "8.x-1.0-alpha6",
+                "shasum": "ec378158521afff8181f3536e140a31c161fc867"
+            },
+            "require": {
+                "drupal/core": "~8.3"
+            },
+            "type": "drupal-module",
+            "extra": {
+                "branch-alias": {
+                    "dev-1.x": "1.x-dev"
+                },
+                "drupal": {
+                    "version": "8.x-1.0-alpha6",
+                    "datestamp": "1493675943",
+                    "security-coverage": {
+                        "status": "not-covered",
+                        "message": "Alpha releases are not covered by Drupal security advisories."
+                    }
+                }
+            },
+            "notification-url": "https://packages.drupal.org/8/downloads",
+            "license": [
+                "GPL-2.0+"
+            ],
+            "authors": [
+                {
+                    "name": "Berdir",
+                    "homepage": "https://www.drupal.org/user/214652"
+                },
+                {
+                    "name": "Sam152",
+                    "homepage": "https://www.drupal.org/user/1485048"
+                },
+                {
+                    "name": "andypost",
+                    "homepage": "https://www.drupal.org/user/118908"
+                },
+                {
+                    "name": "benjy",
+                    "homepage": "https://www.drupal.org/user/1852732"
+                },
+                {
+                    "name": "dawehner",
+                    "homepage": "https://www.drupal.org/user/99340"
+                },
+                {
+                    "name": "jibran",
+                    "homepage": "https://www.drupal.org/user/1198144"
+                },
+                {
+                    "name": "larowlan",
+                    "homepage": "https://www.drupal.org/user/395439"
+                },
+                {
+                    "name": "matslats",
+                    "homepage": "https://www.drupal.org/user/140053"
+                }
+            ],
+            "description": "Imports default content when a module is enabled",
+            "homepage": "https://www.drupal.org/project/default_content",
+            "support": {
+                "source": "http://cgit.drupalcode.org/default_content"
+            }
+        },
+        {
             "name": "drupal/diff",
             "version": "1.0.0-rc1",
             "source": {
@@ -3043,8 +3118,7 @@
             "homepage": "https://www.drupal.org/project/elasticsearch_helper",
             "support": {
                 "source": "http://cgit.drupalcode.org/elasticsearch_helper"
-            },
-            "time": "2017-08-30T13:04:27+00:00"
+            }
         },
         {
             "name": "drupal/embed",
@@ -5491,6 +5565,57 @@
             }
         },
         {
+            "name": "drupal/redirect",
+            "version": "1.0.0-beta1",
+            "source": {
+                "type": "git",
+                "url": "https://git.drupal.org/project/redirect",
+                "reference": "8.x-1.0-beta1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://ftp.drupal.org/files/projects/redirect-8.x-1.0-beta1.zip",
+                "reference": "8.x-1.0-beta1",
+                "shasum": "0be21502538afc193a6817089476e7f6ddae2f6d"
+            },
+            "require": {
+                "drupal/core": "~8"
+            },
+            "type": "drupal-module",
+            "extra": {
+                "branch-alias": {
+                    "dev-1.x": "1.x-dev"
+                },
+                "drupal": {
+                    "version": "8.x-1.0-beta1",
+                    "datestamp": "1501443542",
+                    "security-coverage": {
+                        "status": "not-covered",
+                        "message": "Project has not opted into security advisory coverage!"
+                    }
+                }
+            },
+            "notification-url": "https://packages.drupal.org/8/downloads",
+            "license": [
+                "GPL-2.0+"
+            ],
+            "authors": [
+                {
+                    "name": "Berdir",
+                    "homepage": "https://www.drupal.org/user/214652"
+                },
+                {
+                    "name": "Dave Reid",
+                    "homepage": "https://www.drupal.org/user/53892"
+                }
+            ],
+            "description": "Allows users to redirect from old URLs to new URLs.",
+            "homepage": "https://www.drupal.org/project/redirect",
+            "support": {
+                "source": "http://cgit.drupalcode.org/redirect"
+            }
+        },
+        {
             "name": "drupal/relaxed",
             "version": "1.0.0-beta2",
             "source": {
@@ -6553,8 +6678,7 @@
             "homepage": "https://www.drupal.org/project/vbo_export",
             "support": {
                 "source": "http://cgit.drupalcode.org/vbo_export"
-            },
-            "time": "2017-09-13T13:54:43+00:00"
+            }
         },
         {
             "name": "drupal/video_embed_field",
@@ -8208,21 +8332,23 @@
         },
         {
             "name": "nrel/nrel_vendor_registration_profile",
-            "version": "1.004",
+            "version": "1.006",
             "source": {
                 "type": "git",
                 "url": "https://github.com/NREL/nrel_vendor_registration_profile.git",
-                "reference": "ae8d4c6552d87b82286ebdd50571321d84855fc9"
+                "reference": "4a152c61ee9f4f6466a107d974edbd7c317e8f3b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/NREL/nrel_vendor_registration_profile/zipball/ae8d4c6552d87b82286ebdd50571321d84855fc9",
-                "reference": "ae8d4c6552d87b82286ebdd50571321d84855fc9",
+                "url": "https://api.github.com/repos/NREL/nrel_vendor_registration_profile/zipball/4a152c61ee9f4f6466a107d974edbd7c317e8f3b",
+                "reference": "4a152c61ee9f4f6466a107d974edbd7c317e8f3b",
                 "shasum": ""
             },
             "require": {
                 "drupal/conditional_fields": "^1.0@alpha",
+                "drupal/default_content": "^1.0@alpha",
                 "drupal/markup": "^1.0@beta",
+                "drupal/redirect": "^1.0@beta",
                 "nrel/communications": "^1.1.1.18"
             },
             "require-dev": {
@@ -8270,7 +8396,7 @@
             ],
             "description": "Custom profile for the NREL NREL Vendor Registration project. Built by Fruition.net.",
             "homepage": "https://fruition.net",
-            "time": "2017-09-27T15:08:37+00:00"
+            "time": "2017-09-27T15:46:38+00:00"
         },
         {
             "name": "oomphinc/composer-installers-extender",
