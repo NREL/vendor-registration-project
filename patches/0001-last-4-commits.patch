@@ -1,0 +1,866 @@
+From c89fb89742429f3c932e7962bae17be648dd3593 Mon Sep 17 00:00:00 2001
+From: Adam <djphenaproxima@gmail.com>
+Date: Fri, 18 Aug 2017 14:58:09 -0400
+Subject: [PATCH 1/4] Hide API docs for bundle entities behind a config option
+ (#435)
+
+---
+ .../lightning_api/config/install/lightning_api.settings.yml    |  1 +
+ .../lightning_api/config/schema/lightning_api.schema.yml       |  3 +++
+ modules/lightning_features/lightning_api/lightning_api.install | 10 ++++++++++
+ modules/lightning_features/lightning_api/lightning_api.module  |  2 +-
+ .../lightning_features/lightning_api/src/Form/SettingsForm.php | 10 +++++++++-
+ 5 files changed, 24 insertions(+), 2 deletions(-)
+
+diff --git a/modules/lightning_features/lightning_api/config/install/lightning_api.settings.yml b/modules/lightning_features/lightning_api/config/install/lightning_api.settings.yml
+index 9f280f4..c953408 100644
+--- a/modules/lightning_features/lightning_api/config/install/lightning_api.settings.yml
++++ b/modules/lightning_features/lightning_api/config/install/lightning_api.settings.yml
+@@ -1 +1,2 @@
+ entity_json: false
++bundle_docs: false
+diff --git a/modules/lightning_features/lightning_api/config/schema/lightning_api.schema.yml b/modules/lightning_features/lightning_api/config/schema/lightning_api.schema.yml
+index 79d73e4..cd50834 100644
+--- a/modules/lightning_features/lightning_api/config/schema/lightning_api.schema.yml
++++ b/modules/lightning_features/lightning_api/config/schema/lightning_api.schema.yml
+@@ -5,3 +5,6 @@ lightning_api.settings:
+     entity_json:
+       type: boolean
+       label: 'Expose "View JSON" link in entity operations'
++    bundle_docs:
++      type: boolean
++      label: 'Expose "View API Documentation" link in bundle entity operations'
+diff --git a/modules/lightning_features/lightning_api/lightning_api.install b/modules/lightning_features/lightning_api/lightning_api.install
+index f62f86d..38a3c19 100644
+--- a/modules/lightning_features/lightning_api/lightning_api.install
++++ b/modules/lightning_features/lightning_api/lightning_api.install
+@@ -40,3 +40,13 @@ function lightning_api_install() {
+     lightning_api_modules_installed(['simple_oauth']);
+   }
+ }
++
++/**
++ * Sets a default value for lightning_api.settings:bundle_docs.
++ */
++function lightning_api_update_8001() {
++  \Drupal::configFactory()
++    ->getEditable('lightning_api.settings')
++    ->set('bundle_docs', TRUE)
++    ->save();
++}
+diff --git a/modules/lightning_features/lightning_api/lightning_api.module b/modules/lightning_features/lightning_api/lightning_api.module
+index 123c094..67ee92b 100644
+--- a/modules/lightning_features/lightning_api/lightning_api.module
++++ b/modules/lightning_features/lightning_api/lightning_api.module
+@@ -93,7 +93,7 @@ function lightning_api_entity_operation(EntityInterface $entity) {
+   }
+ 
+   $bundle_of = $entity->getEntityType()->getBundleOf();
+-  if ($bundle_of) {
++  if ($bundle_of && \Drupal::config('lightning_api.settings')->get('bundle_docs')) {
+     $fragment = str_replace(' ', '-', sprintf(
+       'tag/%s-%s',
+       \Drupal::entityTypeManager()->getDefinition($bundle_of)->getLabel(),
+diff --git a/modules/lightning_features/lightning_api/src/Form/SettingsForm.php b/modules/lightning_features/lightning_api/src/Form/SettingsForm.php
+index 547eed5..95944bb 100644
+--- a/modules/lightning_features/lightning_api/src/Form/SettingsForm.php
++++ b/modules/lightning_features/lightning_api/src/Form/SettingsForm.php
+@@ -28,10 +28,17 @@ class SettingsForm extends ConfigFormBase {
+    * {@inheritdoc}
+    */
+   public function buildForm(array $form, FormStateInterface $form_state) {
++    $config = $this->config('lightning_api.settings');
++
+     $form['entity_json'] = [
+       '#type' => 'checkbox',
+       '#title' => $this->t('Expose a "View JSON" link in entity operations'),
+-      '#default_value' => $this->config('lightning_api.settings')->get('entity_json'),
++      '#default_value' => $config->get('entity_json'),
++    ];
++    $form['bundle_docs'] = [
++      '#type' => 'checkbox',
++      '#title' => $this->t('Expose a "View API Documentation" link in bundle entity operations'),
++      '#default_value' => $config->get('bundle_docs'),
+     ];
+     return parent::buildForm($form, $form_state);
+   }
+@@ -42,6 +49,7 @@ class SettingsForm extends ConfigFormBase {
+   public function submitForm(array &$form, FormStateInterface $form_state) {
+     $this->config('lightning_api.settings')
+       ->set('entity_json', (bool) $form_state->getValue('entity_json'))
++      ->set('bundle_docs', (bool) $form_state->getValue('bundle_docs'))
+       ->save();
+ 
+     parent::submitForm($form, $form_state);
+-- 
+2.14.1
+
+
+From a164dcfa0f00ee77fe54adae561388af1aa48ffa Mon Sep 17 00:00:00 2001
+From: Adam Balsam <balsama@users.noreply.github.com>
+Date: Mon, 21 Aug 2017 12:40:04 -0400
+Subject: [PATCH 2/4] Issue #2672038 by phenaproxima: Support bulk media upload
+ (#425, #430)
+
+---
+ README.md                                          |   1 +
+ UPDATE.md                                          |   4 +
+ composer.json                                      |   4 +-
+ composer.lock                                      | 108 ++++++++++++++-
+ drupal-org.make                                    |   9 +-
+ lightning.info.yml                                 |   1 +
+ .../modules/lightning_dev/lightning_dev.install    |   7 +
+ .../config/optional/user.role.media_creator.yml    |   1 +
+ .../lightning_media/lightning_media.info.yml       |   1 +
+ .../lightning_media_bulk_upload.info.yml           |   9 ++
+ .../lightning_media_bulk_upload.install            |   8 ++
+ .../lightning_media_bulk_upload.links.action.yml   |   5 +
+ .../lightning_media_bulk_upload.routing.yml        |   7 +
+ .../src/Form/BulkUploadForm.php                    | 154 +++++++++++++++++++++
+ src/Composer/Package.php                           |  28 ++--
+ tests/config/core.extension.yml                    |   2 +
+ tests/config/dropzonejs.settings.yml               |   2 +
+ tests/config/user.role.media_creator.yml           |   1 +
+ tests/features/media/bulk_upload.feature           |  16 +++
+ tests/src/Functional/ConfigIntegrityTest.php       |   2 +
+ 20 files changed, 353 insertions(+), 17 deletions(-)
+ create mode 100644 modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.info.yml
+ create mode 100644 modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.install
+ create mode 100644 modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.links.action.yml
+ create mode 100644 modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.routing.yml
+ create mode 100644 modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/src/Form/BulkUploadForm.php
+ create mode 100644 tests/config/dropzonejs.settings.yml
+ create mode 100644 tests/features/media/bulk_upload.feature
+
+diff --git a/README.md b/README.md
+index 5f2501b..c4b7b2e 100644
+--- a/README.md
++++ b/README.md
+@@ -15,6 +15,7 @@ The preferred way to install Lightning is using our
+ [Composer-based project template][template]. It's easy!
+ 
+ ```
++$ composer self-update
+ $ composer create-project acquia/lightning-project MY_PROJECT
+ ```
+ 
+diff --git a/UPDATE.md b/UPDATE.md
+index 86bd187..8e802fe 100644
+--- a/UPDATE.md
++++ b/UPDATE.md
+@@ -56,6 +56,10 @@ use. For example, if you are currently running Beta 1 and are trying to update
+ to Beta 3, you will need to follow the instructions for updating from Beta 1 to
+ Beta 2, then from Beta 2 to Beta 3, in that order.
+ 
++## 2.1.7 to 2.1.8
++* Lightning now has support for bulk uploading media assets. To enable this
++  feature, install the Bulk Media Upload module from the Lightning Package.
++
+ ## 2.1.6. to 2.1.7
+ * **IMPORTANT!** Page Manager is no longer a dependency of Lightning Layout,
+   and it will no longer ship with Lightning as of the next release. Therefore,
+diff --git a/composer.json b/composer.json
+index d3c2f49..e465d11 100644
+--- a/composer.json
++++ b/composer.json
+@@ -167,7 +167,9 @@
+         "drupal/jsonapi": "^1.1",
+         "drupal/openapi": "1.0-alpha1",
+         "drupal/simple_oauth": "2.0.0-rc3",
+-        "oomphinc/composer-installers-extender": "^1.1"
++        "oomphinc/composer-installers-extender": "^1.1",
++        "drupal/dropzonejs": "1.0.0-alpha7",
++        "bower-asset/dropzone": "^5.1"
+     },
+     "autoload": {
+         "psr-4": {
+diff --git a/composer.lock b/composer.lock
+index efacb39..86cf077 100644
+--- a/composer.lock
++++ b/composer.lock
+@@ -4,7 +4,7 @@
+         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+         "This file is @generated automatically"
+     ],
+-    "content-hash": "6a62e08b91fa77e70ef0b6e67eb4c711",
++    "content-hash": "71b835426d8e40be991c900c071b1d85",
+     "packages": [
+         {
+             "name": "asm89/stack-cors",
+@@ -58,6 +58,22 @@
+             ],
+             "time": "2017-04-11T20:03:41+00:00"
+         },
++        {
++            "name": "bower-asset/dropzone",
++            "version": "v5.1.1",
++            "source": {
++                "type": "git",
++                "url": "https://github.com/enyo/dropzone.git",
++                "reference": "7d0792d1346d83a8b0c0d2919121bdd2b8e7fee4"
++            },
++            "dist": {
++                "type": "zip",
++                "url": "https://api.github.com/repos/enyo/dropzone/zipball/7d0792d1346d83a8b0c0d2919121bdd2b8e7fee4",
++                "reference": "7d0792d1346d83a8b0c0d2919121bdd2b8e7fee4",
++                "shasum": null
++            },
++            "type": "bower-asset"
++        },
+         {
+             "name": "caxy/php-htmldiff",
+             "version": "v0.1.5",
+@@ -1464,6 +1480,93 @@
+                 "issues": "https://www.drupal.org/project/issues/diff"
+             }
+         },
++        {
++            "name": "drupal/dropzonejs",
++            "version": "1.0.0-alpha7",
++            "source": {
++                "type": "git",
++                "url": "https://git.drupal.org/project/dropzonejs",
++                "reference": "8.x-1.0-alpha7"
++            },
++            "dist": {
++                "type": "zip",
++                "url": "https://ftp.drupal.org/files/projects/dropzonejs-8.x-1.0-alpha7.zip",
++                "reference": "8.x-1.0-alpha7",
++                "shasum": "62fc6d46cee1d5fa9885bab3e65b3638172311f6"
++            },
++            "require": {
++                "drupal/core": "*"
++            },
++            "require-dev": {
++                "drupal/entity_browser": "*"
++            },
++            "suggest": {
++                "enyo/dropzone": "Required to user drupal/dropzonejs. Dropzone is an easy to use drag'n'drop library."
++            },
++            "type": "drupal-module",
++            "extra": {
++                "branch-alias": {
++                    "dev-1.x": "1.x-dev"
++                },
++                "drupal": {
++                    "version": "8.x-1.0-alpha7",
++                    "datestamp": "1495200183",
++                    "security-coverage": {
++                        "status": "not-covered",
++                        "message": "Project has not opted into security advisory coverage!"
++                    }
++                }
++            },
++            "notification-url": "https://packages.drupal.org/8/downloads",
++            "license": [
++                "GPL-2.0+"
++            ],
++            "authors": [
++                {
++                    "name": "Janez Urevc",
++                    "homepage": "https://drupal.org/u/slashrsm",
++                    "role": "Maintainer"
++                },
++                {
++                    "name": "Christian Fritsch",
++                    "homepage": "https://drupal.org/u/chrfritsch",
++                    "role": "Maintainer"
++                },
++                {
++                    "name": "Primoz Hmeljak",
++                    "homepage": "https://drupal.org/u/Primsi",
++                    "role": "Maintainer"
++                },
++                {
++                    "name": "See other contributors",
++                    "homepage": "https://www.drupal.org/node/1998478/committers",
++                    "role": "contributor"
++                },
++                {
++                    "name": "slashrsm",
++                    "homepage": "https://www.drupal.org/user/744628"
++                },
++                {
++                    "name": "wouters_f",
++                    "homepage": "https://www.drupal.org/user/721548"
++                },
++                {
++                    "name": "zkday",
++                    "homepage": "https://www.drupal.org/user/888644"
++                }
++            ],
++            "description": "Drupal integration for DropzoneJS - An open source library that provides drag’n’drop file uploads with image previews.",
++            "homepage": "https://www.drupal.org/project/dropzonejs",
++            "keywords": [
++                "DropzoneJS",
++                "Drupal"
++            ],
++            "support": {
++                "source": "https://www.drupal.org/project/dropzonejs",
++                "issues": "https://www.drupal.org/project/issues/dropzonejs",
++                "irc": "irc://irc.freenode.org/drupal-contribute"
++            }
++        },
+         {
+             "name": "drupal/embed",
+             "version": "1.0.0",
+@@ -7469,6 +7572,9 @@
+             "extra": {
+                 "branch-alias": {
+                     "dev-master": "8.0.x-dev"
++                },
++                "patches_applied": {
++                    "2697 - Don't add profile dependencies to required_by array of modules": "https://www.drupal.org/files/issues/2902643-2--drush-8.x.patch"
+                 }
+             },
+             "autoload": {
+diff --git a/drupal-org.make b/drupal-org.make
+index 069b546..2034959 100644
+--- a/drupal-org.make
++++ b/drupal-org.make
+@@ -11,6 +11,8 @@ projects[ctools][type] = module
+ projects[ctools][version] = 3.0
+ projects[diff][type] = module
+ projects[diff][version] = 1.0-rc1
++projects[dropzonejs][type] = module
++projects[dropzonejs][version] = 1.0-alpha7
+ projects[embed][type] = module
+ projects[embed][version] = 1.0
+ projects[entity][type] = module
+@@ -75,4 +77,9 @@ projects[workbench_moderation][type] = module
+ projects[workbench_moderation][patch][] = https://www.drupal.org/files/issues/2668006-2.patch
+ projects[workbench_moderation][patch][] = https://www.drupal.org/files/issues/2847078-6.patch
+ projects[workbench_moderation][patch][] = https://www.drupal.org/files/issues/workbench_moderation-quickedit-support-2749503-6.patch
+-projects[workbench_moderation][version] = 1.2
+\ No newline at end of file
++projects[workbench_moderation][version] = 1.2
++libraries[dropzone][type] = library
++libraries[dropzone][download][type] = git
++libraries[dropzone][download][url] = https://github.com/enyo/dropzone.git
++libraries[dropzone][download][branch] = v5.1.1
++libraries[dropzone][download][revision] = 7d0792d1346d83a8b0c0d2919121bdd2b8e7fee4
+\ No newline at end of file
+diff --git a/lightning.info.yml b/lightning.info.yml
+index 376aaba..01245a3 100644
+--- a/lightning.info.yml
++++ b/lightning.info.yml
+@@ -47,6 +47,7 @@ dependencies:
+   - lightning_roles
+   - lightning_search
+   - lightning_landing_page
++  - lightning_media_bulk_upload
+   - lightning_media_document
+   - lightning_media_image
+   - lightning_media_instagram
+diff --git a/modules/lightning_features/lightning_core/modules/lightning_dev/lightning_dev.install b/modules/lightning_features/lightning_core/modules/lightning_dev/lightning_dev.install
+index 4e60d09..3a7bcc1 100644
+--- a/modules/lightning_features/lightning_core/modules/lightning_dev/lightning_dev.install
++++ b/modules/lightning_features/lightning_core/modules/lightning_dev/lightning_dev.install
+@@ -232,3 +232,10 @@ function lightning_dev_update_8007() {
+   $installer->uninstall(['page_manager']);
+   $installer->install(['lightning_api']);
+ }
++
++/**
++ * Executes manual update steps for Lightning 2.1.7 --> 2.1.8.
++ */
++function lightning_dev_update_8008() {
++  \Drupal::service('module_installer')->install(['lightning_media_bulk_upload']);
++}
+diff --git a/modules/lightning_features/lightning_media/config/optional/user.role.media_creator.yml b/modules/lightning_features/lightning_media/config/optional/user.role.media_creator.yml
+index 5077288..ecf26cc 100644
+--- a/modules/lightning_features/lightning_media/config/optional/user.role.media_creator.yml
++++ b/modules/lightning_features/lightning_media/config/optional/user.role.media_creator.yml
+@@ -13,3 +13,4 @@ permissions:
+   - 'create media'
+   - 'delete media'
+   - 'update media'
++  - 'dropzone upload files'
+diff --git a/modules/lightning_features/lightning_media/lightning_media.info.yml b/modules/lightning_features/lightning_media/lightning_media.info.yml
+index 13a4a54..b245996 100644
+--- a/modules/lightning_features/lightning_media/lightning_media.info.yml
++++ b/modules/lightning_features/lightning_media/lightning_media.info.yml
+@@ -15,6 +15,7 @@ dependencies:
+   - user
+   - views_infinite_scroll
+ components:
++  - lightning_media_bulk_upload
+   - lightning_media_document
+   - lightning_media_image
+   - lightning_media_instagram
+diff --git a/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.info.yml b/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.info.yml
+new file mode 100644
+index 0000000..d571f67
+--- /dev/null
++++ b/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.info.yml
+@@ -0,0 +1,9 @@
++name: 'Bulk Media Upload'
++core: 8.x
++type: module
++description: 'Provides a form to upload many media items at once.'
++version: '8.x-2.x-dev'
++package: Lightning
++dependencies:
++  - dropzonejs
++  - lightning_media
+diff --git a/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.install b/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.install
+new file mode 100644
+index 0000000..7544bac
+--- /dev/null
++++ b/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.install
+@@ -0,0 +1,8 @@
++<?php
++
++/**
++ * Implements hook_install().
++ */
++function lightning_media_bulk_upload_install() {
++  user_role_grant_permissions('media_creator', ['dropzone upload files']);
++}
+diff --git a/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.links.action.yml b/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.links.action.yml
+new file mode 100644
+index 0000000..0b1638e
+--- /dev/null
++++ b/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.links.action.yml
+@@ -0,0 +1,5 @@
++lightning_media.bulk_upload:
++  route_name: lightning_media.bulk_upload
++  title: 'Bulk upload'
++  appears_on:
++    - view.media.media_page_list
+diff --git a/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.routing.yml b/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.routing.yml
+new file mode 100644
+index 0000000..1733f7b
+--- /dev/null
++++ b/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/lightning_media_bulk_upload.routing.yml
+@@ -0,0 +1,7 @@
++lightning_media.bulk_upload:
++  path: '/admin/content/media/bulk-upload'
++  defaults:
++    _title: 'Bulk upload'
++    _form: '\Drupal\lightning_media_bulk_upload\Form\BulkUploadForm'
++  requirements:
++    _permission: 'dropzone upload files,create media'
+diff --git a/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/src/Form/BulkUploadForm.php b/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/src/Form/BulkUploadForm.php
+new file mode 100644
+index 0000000..6364adb
+--- /dev/null
++++ b/modules/lightning_features/lightning_media/modules/lightning_media_bulk_upload/src/Form/BulkUploadForm.php
+@@ -0,0 +1,154 @@
++<?php
++
++namespace Drupal\lightning_media_bulk_upload\Form;
++
++use Drupal\Core\Entity\EntityTypeManagerInterface;
++use Drupal\Core\Form\FormBase;
++use Drupal\Core\Form\FormStateInterface;
++use Drupal\Core\StringTranslation\TranslationInterface;
++use Drupal\lightning_core\Element;
++use Drupal\lightning_media\Exception\IndeterminateBundleException;
++use Drupal\lightning_media\MediaHelper;
++use Symfony\Component\DependencyInjection\ContainerInterface;
++
++/**
++ * A form for uploading multiple media assets at once.
++ */
++class BulkUploadForm extends FormBase {
++
++  /**
++   * The entity type manager.
++   *
++   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
++   */
++  protected $entityTypeManager;
++
++  /**
++   * The media helper service.
++   *
++   * @var \Drupal\lightning_media\MediaHelper
++   */
++  protected $helper;
++
++  /**
++   * BulkUploadForm constructor.
++   *
++   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
++   *   The entity type manager.
++   * @param \Drupal\lightning_media\MediaHelper $helper
++   *   The media helper service.
++   * @param \Drupal\Core\StringTranslation\TranslationInterface $translator
++   *   The string translation service.
++   */
++  public function __construct(EntityTypeManagerInterface $entity_type_manager, MediaHelper $helper, TranslationInterface $translator) {
++    $this->entityTypeManager = $entity_type_manager;
++    $this->helper = $helper;
++    $this->setStringTranslation($translator);
++  }
++
++  /**
++   * {@inheritdoc}
++   */
++  public static function create(ContainerInterface $container) {
++    return new static(
++      $container->get('entity_type.manager'),
++      $container->get('lightning.media_helper'),
++      $container->get('string_translation')
++    );
++  }
++
++  /**
++   * {@inheritdoc}
++   */
++  public function getFormId() {
++    return 'bulk_upload_form';
++  }
++
++  /**
++   * {@inheritdoc}
++   */
++  public function buildForm(array $form, FormStateInterface $form_state) {
++    $extensions = $this->helper->getFileExtensions(TRUE);
++
++    $form['dropzone'] = [
++      '#type' => 'dropzonejs',
++      '#dropzone_description' => $this->t('Drag files here to upload them'),
++      '#extensions' => implode(' ', $extensions),
++    ];
++    $form['continue'] = [
++      '#type' => 'submit',
++      '#value' => $this->t('Continue'),
++    ];
++
++    $variables = [
++      '@max_size' => static::bytesToString(file_upload_max_size()),
++      '@extensions' => Element::oxford($extensions),
++    ];
++    $form['dropzone']['#description'] = $this->t('You can upload as many files as you like. Each file can be up to @max_size in size. The following file extensions are accepted: @extensions', $variables);
++
++    return $form;
++  }
++
++  /**
++   * Converts a number of bytes into a human-readable string.
++   *
++   * @param int $bytes
++   *   A number of bytes.
++   *
++   * @return string
++   *   The human-readable measurement, like '2 MB' or '10 GB'.
++   */
++  public static function bytesToString($bytes) {
++    $units = array_map('t', ['bytes', 'KB', 'MB', 'GB', 'TB']);
++
++    while ($bytes > 1024) {
++      $bytes /= 1024;
++      array_shift($units);
++    }
++    return $bytes . ' ' . reset($units);
++  }
++
++  /**
++   * {@inheritdoc}
++   */
++  public function submitForm(array &$form, FormStateInterface $form_state) {
++    $bulk_create = [];
++
++    $uploads = $form_state->getValue(['dropzone', 'uploaded_files']);
++
++    foreach ($uploads as $upload) {
++      // Create a file entity for the temporary file.
++      /** @var \Drupal\file\FileInterface $file */
++      $file = $this->entityTypeManager->getStorage('file')->create([
++        'uri' => $upload['path'],
++      ]);
++      $file->setTemporary();
++      $file->save();
++
++      try {
++        $entity = $this->helper->createFromInput($file);
++      }
++      catch (IndeterminateBundleException $e) {
++        drupal_set_message('error', (string) $e);
++        continue;
++      }
++
++      $file = MediaHelper::useFile($entity, $file);
++      $file->setPermanent();
++      $file->save();
++      $entity->save();
++      array_push($bulk_create, $bulk_create ? $entity->id() : $entity);
++    }
++
++    if ($bulk_create) {
++      /** @var \Drupal\media_entity\MediaInterface $entity */
++      $redirect = array_shift($bulk_create)->toUrl('edit-form', [
++        'query' => [
++          'bulk_create' => $bulk_create,
++        ],
++      ]);
++      $form_state->setRedirectUrl($redirect);
++    }
++  }
++
++}
+diff --git a/src/Composer/Package.php b/src/Composer/Package.php
+index 04de369..320bf30 100644
+--- a/src/Composer/Package.php
++++ b/src/Composer/Package.php
+@@ -30,22 +30,22 @@ class Package {
+     $executor->execute($bin_dir . '/drush make-convert composer.lock', $make);
+     $make = Yaml::parse($make);
+ 
+-    // Include any drupal-library packages in the make file.
+-    $libraries = $composer
+-      ->getRepositoryManager()
+-      ->getLocalRepository()
+-      ->getPackages();
+-
+-    $libraries = array_filter($libraries, function (PackageInterface $package) {
+-      return $package->getType() == 'drupal-library';
+-    });
++    // Include any library packages in the make file.
++    $library_types = [
++      'drupal-library',
++      'bower-asset',
++      'npm-asset',
++    ];
++    $packages = $composer->getRepositoryManager()->getLocalRepository()->getPackages();
+ 
+     // Drop the vendor prefixes.
+-    foreach ($libraries as $library) {
+-      $old_key = $library->getName();
+-      $new_key = basename($old_key);
+-      $make['libraries'][$new_key] = $make['libraries'][$old_key];
+-      unset($make['libraries'][$old_key]);
++    foreach ($packages as $package) {
++      if (in_array($package->getType(), $library_types)) {
++        $old_key = $package->getName();
++        $new_key = basename($old_key);
++        $make['libraries'][$new_key] = $make['libraries'][$old_key];
++        unset($make['libraries'][$old_key]);
++      }
+     }
+ 
+     if (isset($make['projects']['drupal'])) {
+diff --git a/tests/config/core.extension.yml b/tests/config/core.extension.yml
+index da3129d..54a6b12 100644
+--- a/tests/config/core.extension.yml
++++ b/tests/config/core.extension.yml
+@@ -13,6 +13,7 @@ module:
+   dblog: 0
+   devel_generate: 0
+   diff: 0
++  dropzonejs: 0
+   editor: 0
+   embed: 0
+   entity: 0
+@@ -37,6 +38,7 @@ module:
+   lightning_landing_page: 0
+   lightning_layout: 0
+   lightning_media: 0
++  lightning_media_bulk_upload: 0
+   lightning_media_document: 0
+   lightning_media_image: 0
+   lightning_media_instagram: 0
+diff --git a/tests/config/dropzonejs.settings.yml b/tests/config/dropzonejs.settings.yml
+new file mode 100644
+index 0000000..13c066d
+--- /dev/null
++++ b/tests/config/dropzonejs.settings.yml
+@@ -0,0 +1,2 @@
++tmp_upload_scheme: temporary
++_core: {  }
+diff --git a/tests/config/user.role.media_creator.yml b/tests/config/user.role.media_creator.yml
+index 82d80ff..fc37c6e 100644
+--- a/tests/config/user.role.media_creator.yml
++++ b/tests/config/user.role.media_creator.yml
+@@ -11,4 +11,5 @@ permissions:
+   - 'access media_browser entity browser pages'
+   - 'create media'
+   - 'delete media'
++  - 'dropzone upload files'
+   - 'update media'
+diff --git a/tests/features/media/bulk_upload.feature b/tests/features/media/bulk_upload.feature
+new file mode 100644
+index 0000000..cbe901d
+--- /dev/null
++++ b/tests/features/media/bulk_upload.feature
+@@ -0,0 +1,16 @@
++@lightning @api @media @javascript
++Feature: Bulk uploading media assets
++
++  @72286b5d @with-module:lightning_test
++  Scenario: Bulk uploading media assets
++    Given I am logged in as a user with the media_creator role
++    When I visit "/admin/content/media"
++    And I click "Bulk upload"
++    # Wait for Dropzone to be fully initialized.
++    And I wait 5 seconds
++    And I attach the file "test.jpg" to the dropzone
++    And I attach the file "test.pdf" to the dropzone
++    And I press "Continue"
++    And I press "Save and keep published"
++    And I press "Save and keep published"
++    Then I should be visiting a media entity
+diff --git a/tests/src/Functional/ConfigIntegrityTest.php b/tests/src/Functional/ConfigIntegrityTest.php
+index 51f71fb..3ee802c 100644
+--- a/tests/src/Functional/ConfigIntegrityTest.php
++++ b/tests/src/Functional/ConfigIntegrityTest.php
+@@ -32,6 +32,8 @@ class ConfigIntegrityTest extends BrowserTestBase {
+     // All users should be able to view media items.
+     $this->assertPermissions('anonymous', 'view media');
+     $this->assertPermissions('authenticated', 'view media');
++    // Media creators can use bulk upload.
++    $this->assertPermissions('media_creator', 'dropzone upload files');
+ 
+     $this->assertEntityExists('node_type', [
+       'page',
+-- 
+2.14.1
+
+
+From e9fc56188f56fcb6e0e738d3fb7ae5e357bf3f94 Mon Sep 17 00:00:00 2001
+From: Adam <djphenaproxima@gmail.com>
+Date: Wed, 23 Aug 2017 09:48:56 -0400
+Subject: [PATCH 3/4] Make Operations the last column of the administrative
+ content view (#436)
+
+---
+ UPDATE.md                                              |  5 +++++
+ .../lightning_features/lightning_core/src/Element.php  | 18 ++++++++++++++++++
+ .../lightning_workflow/lightning_workflow.module       | 16 ++++++++++------
+ 3 files changed, 33 insertions(+), 6 deletions(-)
+
+diff --git a/UPDATE.md b/UPDATE.md
+index 8e802fe..ba90f52 100644
+--- a/UPDATE.md
++++ b/UPDATE.md
+@@ -59,6 +59,11 @@ Beta 2, then from Beta 2 to Beta 3, in that order.
+ ## 2.1.7 to 2.1.8
+ * Lightning now has support for bulk uploading media assets. To enable this
+   feature, install the Bulk Media Upload module from the Lightning Package.
++* New installs of Lightning that include the Workflow component will now place
++  the Operations drop-button as the last column of the /admin/content view.
++  To make this change in your existing Lightning installation, edit the
++  **content** view, move the Operations field to the end of the list of fields,
++  and save the changes.
+ 
+ ## 2.1.6. to 2.1.7
+ * **IMPORTANT!** Page Manager is no longer a dependency of Lightning Layout,
+diff --git a/modules/lightning_features/lightning_core/src/Element.php b/modules/lightning_features/lightning_core/src/Element.php
+index badfcaa..21d2d3d 100644
+--- a/modules/lightning_features/lightning_core/src/Element.php
++++ b/modules/lightning_features/lightning_core/src/Element.php
+@@ -50,6 +50,24 @@ class Element {
+     });
+   }
+ 
++  /**
++   * Moves element(s) to the end of an associative array.
++   *
++   * @param array $values
++   *   The array to modify.
++   * @param mixed $key
++   *   The key(s) of the element(s) to move.
++   */
++  public static function toTail(array &$values, $key) {
++    $key = (array) $key;
++
++    $keys = array_keys($values);
++    $keys = array_diff($keys, $key);
++    $keys = array_merge($keys, $key);
++
++    static::order($values, $keys);
++  }
++
+   /**
+    * Pre-render function to disable all buttons in a renderable element.
+    *
+diff --git a/modules/lightning_features/lightning_workflow/lightning_workflow.module b/modules/lightning_features/lightning_workflow/lightning_workflow.module
+index edc0bf3..faf6843 100644
+--- a/modules/lightning_features/lightning_workflow/lightning_workflow.module
++++ b/modules/lightning_features/lightning_workflow/lightning_workflow.module
+@@ -9,6 +9,7 @@ use Drupal\Core\Entity\EntityInterface;
+ use Drupal\Core\Entity\EntityPublishedInterface;
+ use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+ use Drupal\Core\Form\FormStateInterface;
++use Drupal\lightning_core\Element;
+ use Drupal\lightning_core\OverrideHelper as Override;
+ use Drupal\lightning_core\Routing\RouteSubscriber;
+ use Drupal\lightning_workflow\Form\NodeForm;
+@@ -86,21 +87,24 @@ function lightning_workflow_view_presave(ViewEntityInterface $view) {
+   }
+   elseif ($view->id() == 'content' && $view->isNew()) {
+     $display = &$view->getDisplay('default');
++    $display_options = &$display['display_options'];
+ 
+     // Add the moderation state as a field.
+-    unset($display['display_options']['fields']['status']);
+-    $display['display_options']['fields']['moderation_state'] = unserialize('a:37:{s:2:"id";s:16:"moderation_state";s:5:"table";s:15:"node_field_data";s:5:"field";s:16:"moderation_state";s:12:"relationship";s:4:"none";s:10:"group_type";s:5:"group";s:11:"admin_label";s:0:"";s:5:"label";s:6:"Status";s:7:"exclude";b:0;s:5:"alter";a:26:{s:10:"alter_text";b:0;s:4:"text";s:0:"";s:9:"make_link";b:0;s:4:"path";s:0:"";s:8:"absolute";b:0;s:8:"external";b:0;s:14:"replace_spaces";b:0;s:9:"path_case";s:4:"none";s:15:"trim_whitespace";b:0;s:3:"alt";s:0:"";s:3:"rel";s:0:"";s:10:"link_class";s:0:"";s:6:"prefix";s:0:"";s:6:"suffix";s:0:"";s:6:"target";s:0:"";s:5:"nl2br";b:0;s:10:"max_length";i:0;s:13:"word_boundary";b:1;s:8:"ellipsis";b:1;s:9:"more_link";b:0;s:14:"more_link_text";s:0:"";s:14:"more_link_path";s:0:"";s:10:"strip_tags";b:0;s:4:"trim";b:0;s:13:"preserve_tags";s:0:"";s:4:"html";b:0;}s:12:"element_type";s:0:"";s:13:"element_class";s:0:"";s:18:"element_label_type";s:0:"";s:19:"element_label_class";s:0:"";s:19:"element_label_colon";b:1;s:20:"element_wrapper_type";s:0:"";s:21:"element_wrapper_class";s:0:"";s:23:"element_default_classes";b:1;s:5:"empty";s:0:"";s:10:"hide_empty";b:0;s:10:"empty_zero";b:0;s:16:"hide_alter_empty";b:1;s:17:"click_sort_column";s:9:"target_id";s:4:"type";s:22:"entity_reference_label";s:8:"settings";a:1:{s:4:"link";b:0;}s:12:"group_column";s:9:"target_id";s:13:"group_columns";a:0:{}s:10:"group_rows";b:1;s:11:"delta_limit";i:0;s:12:"delta_offset";i:0;s:14:"delta_reversed";b:0;s:16:"delta_first_last";b:0;s:10:"multi_type";s:9:"separator";s:9:"separator";s:2:", ";s:17:"field_api_classes";b:0;s:11:"entity_type";s:4:"node";s:12:"entity_field";s:16:"moderation_state";s:9:"plugin_id";s:5:"field";}');
++    unset($display_options['fields']['status']);
++    $display_options['fields']['moderation_state'] = unserialize('a:37:{s:2:"id";s:16:"moderation_state";s:5:"table";s:15:"node_field_data";s:5:"field";s:16:"moderation_state";s:12:"relationship";s:4:"none";s:10:"group_type";s:5:"group";s:11:"admin_label";s:0:"";s:5:"label";s:6:"Status";s:7:"exclude";b:0;s:5:"alter";a:26:{s:10:"alter_text";b:0;s:4:"text";s:0:"";s:9:"make_link";b:0;s:4:"path";s:0:"";s:8:"absolute";b:0;s:8:"external";b:0;s:14:"replace_spaces";b:0;s:9:"path_case";s:4:"none";s:15:"trim_whitespace";b:0;s:3:"alt";s:0:"";s:3:"rel";s:0:"";s:10:"link_class";s:0:"";s:6:"prefix";s:0:"";s:6:"suffix";s:0:"";s:6:"target";s:0:"";s:5:"nl2br";b:0;s:10:"max_length";i:0;s:13:"word_boundary";b:1;s:8:"ellipsis";b:1;s:9:"more_link";b:0;s:14:"more_link_text";s:0:"";s:14:"more_link_path";s:0:"";s:10:"strip_tags";b:0;s:4:"trim";b:0;s:13:"preserve_tags";s:0:"";s:4:"html";b:0;}s:12:"element_type";s:0:"";s:13:"element_class";s:0:"";s:18:"element_label_type";s:0:"";s:19:"element_label_class";s:0:"";s:19:"element_label_colon";b:1;s:20:"element_wrapper_type";s:0:"";s:21:"element_wrapper_class";s:0:"";s:23:"element_default_classes";b:1;s:5:"empty";s:0:"";s:10:"hide_empty";b:0;s:10:"empty_zero";b:0;s:16:"hide_alter_empty";b:1;s:17:"click_sort_column";s:9:"target_id";s:4:"type";s:22:"entity_reference_label";s:8:"settings";a:1:{s:4:"link";b:0;}s:12:"group_column";s:9:"target_id";s:13:"group_columns";a:0:{}s:10:"group_rows";b:1;s:11:"delta_limit";i:0;s:12:"delta_offset";i:0;s:14:"delta_reversed";b:0;s:16:"delta_first_last";b:0;s:10:"multi_type";s:9:"separator";s:9:"separator";s:2:", ";s:17:"field_api_classes";b:0;s:11:"entity_type";s:4:"node";s:12:"entity_field";s:16:"moderation_state";s:9:"plugin_id";s:5:"field";}');
+ 
+     // Filter by moderation state instead of status.
+-    unset($display['display_options']['filters']['status']);
+-    unset($display['display_options']['filters']['status_extra']);
++    unset($display_options['filters']['status']);
++    unset($display_options['filters']['status_extra']);
+     $display['display_options']['filters']['moderation_state'] = unserialize('a:16:{s:2:"id";s:16:"moderation_state";s:5:"table";s:15:"node_field_data";s:5:"field";s:16:"moderation_state";s:12:"relationship";s:4:"none";s:10:"group_type";s:5:"group";s:11:"admin_label";s:0:"";s:8:"operator";s:1:"=";s:5:"value";s:0:"";s:5:"group";i:1;s:7:"exposed";b:1;s:6:"expose";a:10:{s:11:"operator_id";s:19:"moderation_state_op";s:5:"label";s:6:"Status";s:11:"description";s:0:"";s:12:"use_operator";b:0;s:8:"operator";s:19:"moderation_state_op";s:10:"identifier";s:16:"moderation_state";s:8:"required";b:0;s:8:"remember";b:0;s:8:"multiple";b:0;s:14:"remember_roles";a:3:{s:13:"authenticated";s:13:"authenticated";s:9:"anonymous";s:1:"0";s:13:"administrator";s:1:"0";}}s:10:"is_grouped";b:0;s:10:"group_info";a:10:{s:5:"label";s:0:"";s:11:"description";s:0:"";s:10:"identifier";s:0:"";s:8:"optional";b:1;s:6:"widget";s:6:"select";s:8:"multiple";b:0;s:8:"remember";b:0;s:13:"default_group";s:3:"All";s:22:"default_group_multiple";a:0:{}s:11:"group_items";a:0:{}}s:11:"entity_type";s:4:"node";s:12:"entity_field";s:16:"moderation_state";s:9:"plugin_id";s:6:"string";}');
+ 
+     // Add a relationship to the latest revision.
+-    $display['display_options']['relationships']['latest_revision__node'] = unserialize('a:8:{s:2:"id";s:21:"latest_revision__node";s:5:"table";s:26:"workbench_revision_tracker";s:5:"field";s:21:"latest_revision__node";s:12:"relationship";s:4:"none";s:10:"group_type";s:5:"group";s:11:"admin_label";s:15:"latest revision";s:8:"required";b:0;s:9:"plugin_id";s:8:"standard";}');
++    $display_options['relationships']['latest_revision__node'] = unserialize('a:8:{s:2:"id";s:21:"latest_revision__node";s:5:"table";s:26:"workbench_revision_tracker";s:5:"field";s:21:"latest_revision__node";s:12:"relationship";s:4:"none";s:10:"group_type";s:5:"group";s:11:"admin_label";s:15:"latest revision";s:8:"required";b:0;s:9:"plugin_id";s:8:"standard";}');
+ 
+     // Add the forward revision indicator.
+-    $display['display_options']['fields']['forward_revision_exists'] = unserialize('a:23:{s:2:"id";s:23:"forward_revision_exists";s:5:"table";s:15:"node_field_data";s:5:"field";s:23:"forward_revision_exists";s:12:"relationship";s:4:"none";s:10:"group_type";s:5:"group";s:11:"admin_label";s:0:"";s:5:"label";s:21:"Has unpublished edits";s:7:"exclude";b:0;s:5:"alter";a:26:{s:10:"alter_text";b:0;s:4:"text";s:0:"";s:9:"make_link";b:0;s:4:"path";s:0:"";s:8:"absolute";b:0;s:8:"external";b:0;s:14:"replace_spaces";b:0;s:9:"path_case";s:4:"none";s:15:"trim_whitespace";b:0;s:3:"alt";s:0:"";s:3:"rel";s:0:"";s:10:"link_class";s:0:"";s:6:"prefix";s:0:"";s:6:"suffix";s:0:"";s:6:"target";s:0:"";s:5:"nl2br";b:0;s:10:"max_length";i:0;s:13:"word_boundary";b:1;s:8:"ellipsis";b:1;s:9:"more_link";b:0;s:14:"more_link_text";s:0:"";s:14:"more_link_path";s:0:"";s:10:"strip_tags";b:0;s:4:"trim";b:0;s:13:"preserve_tags";s:0:"";s:4:"html";b:0;}s:12:"element_type";s:0:"";s:13:"element_class";s:0:"";s:18:"element_label_type";s:0:"";s:19:"element_label_class";s:0:"";s:19:"element_label_colon";b:1;s:20:"element_wrapper_type";s:0:"";s:21:"element_wrapper_class";s:0:"";s:23:"element_default_classes";b:1;s:5:"empty";s:0:"";s:10:"hide_empty";b:0;s:10:"empty_zero";b:0;s:16:"hide_alter_empty";b:1;s:11:"entity_type";s:4:"node";s:9:"plugin_id";s:23:"forward_revision_exists";}');
++    $display_options['fields']['forward_revision_exists'] = unserialize('a:23:{s:2:"id";s:23:"forward_revision_exists";s:5:"table";s:15:"node_field_data";s:5:"field";s:23:"forward_revision_exists";s:12:"relationship";s:4:"none";s:10:"group_type";s:5:"group";s:11:"admin_label";s:0:"";s:5:"label";s:21:"Has unpublished edits";s:7:"exclude";b:0;s:5:"alter";a:26:{s:10:"alter_text";b:0;s:4:"text";s:0:"";s:9:"make_link";b:0;s:4:"path";s:0:"";s:8:"absolute";b:0;s:8:"external";b:0;s:14:"replace_spaces";b:0;s:9:"path_case";s:4:"none";s:15:"trim_whitespace";b:0;s:3:"alt";s:0:"";s:3:"rel";s:0:"";s:10:"link_class";s:0:"";s:6:"prefix";s:0:"";s:6:"suffix";s:0:"";s:6:"target";s:0:"";s:5:"nl2br";b:0;s:10:"max_length";i:0;s:13:"word_boundary";b:1;s:8:"ellipsis";b:1;s:9:"more_link";b:0;s:14:"more_link_text";s:0:"";s:14:"more_link_path";s:0:"";s:10:"strip_tags";b:0;s:4:"trim";b:0;s:13:"preserve_tags";s:0:"";s:4:"html";b:0;}s:12:"element_type";s:0:"";s:13:"element_class";s:0:"";s:18:"element_label_type";s:0:"";s:19:"element_label_class";s:0:"";s:19:"element_label_colon";b:1;s:20:"element_wrapper_type";s:0:"";s:21:"element_wrapper_class";s:0:"";s:23:"element_default_classes";b:1;s:5:"empty";s:0:"";s:10:"hide_empty";b:0;s:10:"empty_zero";b:0;s:16:"hide_alter_empty";b:1;s:11:"entity_type";s:4:"node";s:9:"plugin_id";s:23:"forward_revision_exists";}');
++
++    Element::toTail($display_options['fields'], 'operations');
+   }
+ }
+ 
+-- 
+2.14.1
+
+
+From d637ec6c2467892c4251daef5a5d770dc9910305 Mon Sep 17 00:00:00 2001
+From: Samuel Mortenson <samuel.mortenson@acquia.com>
+Date: Fri, 25 Aug 2017 09:28:12 -0700
+Subject: [PATCH 4/4] Show real OAuth errors when generating a key pair. (#440)
+
+---
+ modules/lightning_features/lightning_api/src/OAuthHelper.php | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/modules/lightning_features/lightning_api/src/OAuthHelper.php b/modules/lightning_features/lightning_api/src/OAuthHelper.php
+index fe7bc73..362912b 100644
+--- a/modules/lightning_features/lightning_api/src/OAuthHelper.php
++++ b/modules/lightning_features/lightning_api/src/OAuthHelper.php
+@@ -31,13 +31,13 @@ class OAuthHelper {
+       ]);
+ 
+       if (empty($pk)) {
+-        throw new \Exception($error);
++        throw new \Exception(openssl_error_string() ?: $error);
+       }
+ 
+       $key_pair[0] = NULL;
+       $victory = openssl_pkey_export($pk, $key_pair[0]);
+       if (empty($victory)) {
+-        throw new \Exception($error);
++        throw new \Exception(openssl_error_string() ?: $error);
+       }
+ 
+       $details = openssl_pkey_get_details($pk);
+@@ -45,7 +45,7 @@ class OAuthHelper {
+         $key_pair[1] = $details['key'];
+       }
+       else {
+-        throw new \Exception($error);
++        throw new \Exception(openssl_error_string() ?: $error);
+       }
+ 
+       openssl_pkey_free($pk);
+-- 
+2.14.1
+

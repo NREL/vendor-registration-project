@@ -1,8 +1,8 @@
 {
-    "name": "nrel/solarpaces-project",
-    "description": "Project template for Drupal 8 sites built with the Solarpaces Lightning sub-profile distribution.",
+    "name": "nrel/vendor-registration-project",
+    "description": "Project template for Drupal 8 sites built with the Vendor-Registration Lightning sub-profile distribution.",
     "type": "project",
-    "homepage": "https://github.com/NREL/solarpaces-project",
+    "homepage": "https://github.com/NREL/vendor-registration-project",
     "authors": [
         {
             "name": "Damon Haley (dhaley)",
@@ -16,7 +16,7 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/NREL/solarpaces-project/issues"
+        "issues": "https://github.com/NREL/vendor-registration-project/issues"
     },
     "license": "GPL-2.0+",
     "minimum-stability": "dev",
@@ -42,7 +42,7 @@
     "require": {
         "drupal-composer/drupal-scaffold": "^2.0.0",
         "cweagans/composer-patches": "^1.6.0",
-        "nrel/nrel_solarpaces_profile": "1.003"
+        "nrel/nrel_vendor_registration_profile": "^1.002"
     },
     "repositories": [
         {
@@ -52,19 +52,6 @@
         {
             "type": "composer",
             "url": "https://asset-packagist.org"
-        },
-        {
-            "type":"package",
-            "package": {
-                "name": "NREL/nrel_solarpaces_profile",
-                "version":"1.003",
-                "type": "drupal-profile",
-                "source": {
-                    "url": "https://github.com/NREL/nrel_solarpaces_profile.git",
-                    "type": "git",
-                    "reference":"master"
-                }
-            }
         },
         {
             "type": "package",
@@ -173,10 +160,6 @@
         },
         "enable-patching": true,
         "patches": {
-            "drupal/media_entity_image": {
-                "2875852 - Add Imagick field providers":
-                "https://www.drupal.org/files/issues/media_entity_image-2875852-3-Add-Imagick-field-providers.patch"
-            }
         }
     }
 }
