@@ -42,9 +42,13 @@
     "require": {
         "drupal-composer/drupal-scaffold": "^2.0.0",
         "cweagans/composer-patches": "^1.6.0",
-        "nrel/nrel_vendor_registration_profile": "^1.002"
+        "nrel/nrel_vendor_registration_profile": "^1.0.1"
     },
     "repositories": [
+        {
+            "type": "composer",
+            "url": "http://packagist.test"
+        },
         {
             "type": "composer",
             "url": "https://packages.drupal.org/8"
@@ -124,7 +128,8 @@
       ]
     },
     "config": {
-        "bin-dir": "bin/"
+        "bin-dir": "bin/",
+         "secure-http": false
     },
     "autoload": {
         "classmap": [
